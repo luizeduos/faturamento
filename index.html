@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Declaração de Faturamento</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- HTML2PDF Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    @media print {
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        background-color: white !important;
+      }
+      @page {
+        margin: 0;
+      }
+      .print-hidden {
+        display: none !important;
+      }
+      /* Remove o fundo na impressão padrão do navegador */
+      #document-page {
+        background-image: none !important;
+        box-shadow: none !important;
+        background-color: white !important;
+      }
+    }
+    
+    /* Melhoria visual para inputs focados */
+    input:focus {
+      border-color: #014167;
+      box-shadow: 0 0 0 2px rgba(1, 65, 103, 0.2);
+    }
+
+    /* Esconde barra de rolagem no PDF se necessário */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-100 flex flex-col md:flex-row font-sans text-black">
+
+  <!-- PAINEL DE CONTROLE (Oculto na impressão) -->
+  <div class="w-full md:w-1/3 lg:w-1/4 bg-white border-r shadow-lg flex flex-col print:hidden h-screen overflow-y-auto">
+    <div class="p-4 bg-[#014167] text-white flex flex-col gap-3 sticky top-0 z-10 shadow-md">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="settings" class="w-8 h-8"></i>
+          <h1 class="font-bold">Configurações</h1>
+        </div>
+      </div>
+      
+      <div class="flex gap-2">
+        <button 
+          onclick="window.print()"
+          class="flex-1 flex items-center justify-center gap-1 bg-white text-[#014167] px-3 py-2 rounded hover:bg-gray-100 transition text-sm font-bold"
+          title="Imprimir sem o fundo (para papel físico)"
+        >
+          <i data-lucide="printer" class="w-4 h-4"></i> Imprimir
+        </button>
+        <button 
+          onclick="downloadPDF()"
+          class="flex-1 flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 transition text-sm font-bold"
+          title="Baixar PDF com fundo timbrado"
+        >
+          <i data-lucide="download" class="w-4 h-4"></i> Baixar PDF
+        </button>
+      </div>
+    </div>
+
+    <div class="p-4 space-y-6">
+      
+      <!-- Seção Empresa -->
+      <section>
+        <h2 class="text-sm font-bold text-gray-500 uppercase flex items-center gap-2 mb-3 border-b pb-1">
+          <i data-lucide="building" class="w-4 h-4"></i> Dados da Empresa
+        </h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Nome da Empresa</label>
+            <input type="text" id="in_empresa" class="w-full p-2 border rounded text-sm outline-none" />
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold mb-1">C.N.P.J.</label>
+              <input type="text" id="in_cnpj" class="w-full p-2 border rounded text-sm outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Jucesp</label>
+              <input type="text" id="in_jucesp" class="w-full p-2 border rounded text-sm outline-none" />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold mb-1">Insc. Estadual</label>
+              <input type="text" id="in_ie" class="w-full p-2 border rounded text-sm outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Data</label>
+              <input type="text" id="in_dataAbertura" class="w-full p-2 border rounded text-sm outline-none" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Endereço</label>
+            <input type="text" id="in_endereco" class="w-full p-2 border rounded text-sm outline-none" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Seção Faturamento -->
+      <section>
+        <h2 class="text-sm font-bold text-gray-500 uppercase flex items-center gap-2 mb-3 border-b pb-1">
+          <i data-lucide="file-text" class="w-4 h-4"></i> Meses de Faturamento
+        </h2>
+        <div class="space-y-2">
+          <div id="meses_container">
+            <!-- Meses renderizados via JS -->
+          </div>
+          <button onclick="addMes()" class="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded hover:bg-gray-50 hover:text-[#014167] transition flex justify-center items-center gap-2 font-semibold text-sm">
+            <i data-lucide="plus" class="w-4 h-4"></i> Adicionar Mês
+          </button>
+        </div>
+      </section>
+
+      <!-- Seção Emissão e Assinatura -->
+      <section>
+        <h2 class="text-sm font-bold text-gray-500 uppercase flex items-center gap-2 mb-3 border-b pb-1">
+          <i data-lucide="pen-tool" class="w-4 h-4"></i> Emissão e Assinatura
+        </h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Local e Data</label>
+            <input type="text" id="in_localData" class="w-full p-2 border rounded text-sm outline-none" />
+          </div>
+          <div class="bg-blue-50 p-3 rounded border border-blue-100 mt-2">
+            <p class="text-xs font-semibold text-[#014167] mb-2">Assinatura Direita (Cliente)</p>
+            <div class="space-y-2">
+              <input type="text" id="in_nomeAssinatura" placeholder="Nome" class="w-full p-2 border rounded text-sm outline-none" />
+              <div class="flex gap-2">
+                <input type="text" id="in_rgAssinatura" placeholder="RG" class="w-2/3 p-2 border rounded text-sm outline-none" />
+                <input type="text" id="in_estadoRg" placeholder="UF" class="w-1/3 p-2 border rounded text-sm uppercase outline-none" maxlength="2" />
+              </div>
+              <input type="text" id="in_cpfAssinatura" placeholder="CPF ou CNPJ" class="w-full p-2 border rounded text-sm outline-none" />
+            </div>
+          </div>
+          <div class="bg-gray-50 p-3 rounded border border-gray-200">
+             <p class="text-xs font-semibold text-gray-600 mb-1">Assinatura Esquerda (Fixo)</p>
+             <p class="text-xs text-gray-500">Reynaldo da Silva Moraes<br/>CRC-1SP188092/O-4<br/>CPF-154.274.198-02</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="pb-10"></div>
+    </div>
+  </div>
+
+  <!-- ÁREA DO DOCUMENTO -->
+  <div class="flex-1 overflow-y-auto bg-gray-300 print:bg-white flex justify-center p-4 sm:p-8 print:p-0">
+    <div 
+      id="document-page"
+      class="bg-white shadow-2xl print:shadow-none relative flex flex-col mx-auto"
+      style="width: 210mm; min-height: 297mm; padding: 35mm 20mm 20mm 20mm; box-sizing: border-box; background-image: url('Timbrado.png'); background-size: 100% 100%; background-position: center; background-repeat: no-repeat; font-family: 'Times New Roman', Times, serif;"
+    >
+      <div class="text-center mb-6">
+        <h1 class="text-[16px] uppercase font-bold">FATURAMENTO</h1>
+      </div>
+
+      <div class="mb-6 text-[15px] leading-[1.4]">
+        <p><span>Empresa:</span> <span id="out_empresa"></span></p>
+        <p><span>C.N.P.J.:</span> <span id="out_cnpj"></span></p>
+        <p><span>Jucesp:</span> <span id="out_jucesp"></span></p>
+        <p><span>Insc. Estadual:</span> <span id="out_ie"></span></p>
+        <p><span>Data:</span> <span id="out_dataAbertura"></span></p>
+        <p><span>Endereço:</span> <span id="out_endereco"></span></p>
+      </div>
+
+      <div class="mb-6">
+        <h2 class="font-bold text-[15px] mb-4 text-center uppercase">RECEITA FISCAL - ÚLTIMOS <span id="out_meses_count"></span> MESES</h2>
+        
+        <table class="w-full max-w-[480px] mx-auto text-[15px]">
+          <tbody id="out_meses_table">
+            <!-- Tabela renderizada via JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mb-8 text-[15px] font-bold italic text-center" style="font-family: Calibri, sans-serif;">
+        <p id="out_localData"></p>
+      </div>
+
+      <div class="flex justify-between text-[15px] px-2 pb-4 mt-auto mb-10" style="font-family: Calibri, sans-serif;">
+        <div class="w-[250px] flex flex-col items-center text-center">
+          <div class="w-full border-t border-black mb-1"></div>
+          <p class="font-bold">Reynaldo da Silva Moraes</p>
+          <p class="font-bold">CRC: 1SP188092/O-4</p>
+          <p class="font-bold">CPF: 154.274.198-02</p>
+        </div>
+
+        <div class="w-[250px] flex flex-col items-center text-center">
+          <div class="w-full border-t border-black mb-1"></div>
+          <p class="font-bold" id="out_nomeAssinatura"></p>
+          <p class="font-bold" id="out_rg_container">RG: <span id="out_rgAssinatura"></span>/<span id="out_estadoRg"></span></p>
+          <p class="font-bold"><span id="out_cpf_label">CPF</span>: <span id="out_cpfAssinatura"></span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ESTADO DA APLICAÇÃO
+    const state = {
+      empresa: 'NOME DA EMPRESA',
+      cnpj: '00.000.000/0000-00',
+      jucesp: '00.000.000.000',
+      ie: '000.000.000.000',
+      dataAbertura: '00/00/0000',
+      endereco: 'Rua, 00 - Bairro - Cidade/UF',
+      localData: 'São Miguel Arcanjo, 00 de Mês de 0000',
+      meses: [
+        { id: 1, mes: 'Dezembro', ano: '2025', valor: '0,00' },
+        { id: 2, mes: 'Janeiro', ano: '2026', valor: '0,00' },
+        { id: 3, mes: 'Fevereiro', ano: '2026', valor: '0,00' },
+        { id: 4, mes: 'Março', ano: '2026', valor: '0,00' },
+        { id: 5, mes: 'Abril', ano: '2026', valor: '0,00' },
+        { id: 6, mes: 'Maio', ano: '2026', valor: '0,00' },
+        { id: 7, mes: 'Junho', ano: '2026', valor: '0,00' },
+        { id: 8, mes: 'Julho', ano: '2026', valor: '0,00' },
+        { id: 9, mes: 'Agosto', ano: '2026', valor: '0,00' },
+        { id: 10, mes: 'Setembro', ano: '2026', valor: '0,00' },
+        { id: 11, mes: 'Outubro', ano: '2026', valor: '0,00' },
+        { id: 12, mes: 'Novembro', ano: '2026', valor: '0,00' },
+      ],
+      nomeAssinatura: 'Nome Completo',
+      rgAssinatura: '00.000.000-0',
+      estadoRg: 'SP',
+      cpfAssinatura: '000.000.000-00'
+    };
+
+    // --- FUNÇÕES DE FORMATAÇÃO (REGEX) ---
+
+    const maskCurrency = (value) => {
+      let cleanValue = value.replace(/\D/g, "");
+      let options = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+      let result = (Number(cleanValue) / 100).toLocaleString('pt-BR', options);
+      return result;
+    };
+
+    const parseValor = (str) => {
+      if (!str) return 0;
+      const numStr = str.replace(/\./g, '').replace(',', '.');
+      const val = parseFloat(numStr);
+      return isNaN(val) ? 0 : val;
+    };
+
+    const formatCurrency = (val) => {
+      return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    // --- LOGICA DE BINDING ---
+
+    const bindField = (key) => {
+      const input = document.getElementById(`in_${key}`);
+      const output = document.getElementById(`out_${key}`);
+      
+      if (input) {
+        input.value = state[key];
+        input.addEventListener('input', (e) => {
+          state[key] = e.target.value;
+          if (output) output.innerText = key === 'estadoRg' ? e.target.value.toUpperCase() : e.target.value;
+          if (key === 'rgAssinatura') checkRgVisibility();
+          if (key === 'cpfAssinatura') updateCpfLabel();
+        });
+      }
+      
+      if (output) {
+        output.innerText = key === 'estadoRg' ? state[key].toUpperCase() : state[key];
+      }
+    };
+
+    const checkRgVisibility = () => {
+      const container = document.getElementById('out_rg_container');
+      container.style.display = state.rgAssinatura ? 'block' : 'none';
+    };
+
+    const updateCpfLabel = () => {
+      const label = document.getElementById('out_cpf_label');
+      label.innerText = state.cpfAssinatura.replace(/\D/g, '').length > 11 ? 'CNPJ' : 'CPF';
+    };
+
+    const renderMeses = () => {
+      renderMesesPanel();
+      renderMesesTable();
+    };
+
+    const renderMesesPanel = () => {
+      const container = document.getElementById('meses_container');
+      container.innerHTML = '';
+      
+      state.meses.forEach((m, index) => {
+        const item = document.createElement('div');
+        item.className = 'bg-gray-50 p-2 rounded border border-gray-200 mb-2';
+        item.innerHTML = `
+          <div class="flex gap-2 mb-2">
+            <input type="text" value="${m.mes}" data-id="${m.id}" data-field="mes" placeholder="Mês" class="mes-input w-1/3 p-1 border rounded text-sm outline-none" />
+            <input type="text" value="${m.ano}" data-id="${m.id}" data-field="ano" placeholder="Ano" class="mes-input w-1/4 p-1 border rounded text-sm outline-none" />
+            <input type="text" value="${m.valor}" data-id="${m.id}" data-field="valor" placeholder="Valor" class="mes-input valor-input w-full p-1 border rounded text-sm outline-none font-mono" />
+          </div>
+          <div class="flex justify-between items-center">
+            <div class="flex gap-1">
+              <button onclick="moveUp(${index})" ${index === 0 ? 'disabled' : ''} class="p-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-30">
+                <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="moveDown(${index})" ${index === state.meses.length - 1 ? 'disabled' : ''} class="p-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-30">
+                <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+            <button onclick="removeMes(${m.id})" class="p-1 text-[#014167] hover:bg-gray-200 rounded">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+      lucide.createIcons();
+    };
+
+    const renderMesesTable = () => {
+      const table = document.getElementById('out_meses_table');
+      const countLabel = document.getElementById('out_meses_count');
+      table.innerHTML = '';
+      
+      let total = 0;
+      
+      state.meses.forEach(m => {
+        table.innerHTML += `
+          <tr>
+            <td class="w-40 py-[2px]">${m.mes}</td>
+            <td class="w-40 py-[2px]">${m.ano}</td>
+            <td class="w-5 py-[2px]">R$</td>
+            <td class="w-auto py-[2px] text-right pr-4" style="font-family: 'Times New Roman', serif;">${m.valor}</td>
+          </tr>
+        `;
+        total += parseValor(m.valor);
+      });
+
+      table.innerHTML += `
+        <tr>
+          <td colspan="4" class="h-3 border-t border-gray-300 mt-2"></td>
+        </tr>
+        <tr class="font-bold">
+          <td class="py-1">TOTAL:</td>
+          <td class="py-1"></td>
+          <td class="py-1">R$</td>
+          <td class="py-1 text-right pr-4" style="font-family: 'Times New Roman', serif;">${formatCurrency(total)}</td>
+        </tr>
+      `;
+      
+      countLabel.innerText = state.meses.length < 10 ? `0${state.meses.length}` : state.meses.length;
+    };
+
+    // GERAR PDF COM FUNDO
+    window.downloadPDF = () => {
+      const element = document.getElementById('document-page');
+      
+      // Configurações do PDF
+      const opt = {
+        margin: 0,
+        filename: `Declaracao_Faturamento_${state.empresa.replace(/\s+/g, '_')}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 3, 
+          useCORS: true,
+          letterRendering: true,
+          scrollX: 0,
+          scrollY: 0
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      // Gerar e salvar
+      html2pdf().set(opt).from(element).save();
+    };
+
+    // DELEGAÇÃO DE EVENTOS PARA INPUTS DINÂMICOS
+    document.getElementById('meses_container').addEventListener('input', (e) => {
+      if(e.target.classList.contains('mes-input')) {
+        const id = parseInt(e.target.getAttribute('data-id'));
+        const field = e.target.getAttribute('data-field');
+        const mes = state.meses.find(m => m.id === id);
+        
+        if(mes) {
+          let value = e.target.value;
+          if (field === 'valor') {
+            value = maskCurrency(value);
+            e.target.value = value;
+          }
+          mes[field] = value;
+          renderMesesTable();
+        }
+      }
+    });
+
+    window.addMes = () => {
+      const newId = state.meses.length > 0 ? Math.max(...state.meses.map(m => m.id)) + 1 : 1;
+      state.meses.push({ id: newId, mes: 'Novo Mês', ano: '2026', valor: '0,00' });
+      renderMeses();
+    };
+
+    window.removeMes = (id) => {
+      state.meses = state.meses.filter(m => m.id !== id);
+      renderMeses();
+    };
+
+    window.moveUp = (index) => {
+      if (index === 0) return;
+      [state.meses[index - 1], state.meses[index]] = [state.meses[index], state.meses[index - 1]];
+      renderMeses();
+    };
+
+    window.moveDown = (index) => {
+      if (index === state.meses.length - 1) return;
+      [state.meses[index + 1], state.meses[index]] = [state.meses[index], state.meses[index + 1]];
+      renderMeses();
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+      const keys = ['empresa', 'cnpj', 'jucesp', 'ie', 'dataAbertura', 'endereco', 'localData', 'nomeAssinatura', 'rgAssinatura', 'estadoRg', 'cpfAssinatura'];
+      keys.forEach(bindField);
+      checkRgVisibility();
+      updateCpfLabel();
+      renderMeses();
+    });
+  </script>
+</body>
+</html>
