@@ -232,13 +232,16 @@
       if (output) output.innerText = key === 'estadoRg' ? state[key].toUpperCase() : state[key];
     };
 
+    // Separamos a renderização do Painel (Sidebar) da Tabela (Documento)
     const renderMeses = () => {
-      const container = document.getElementById('meses_container');
-      const table = document.getElementById('out_meses_table');
-      container.innerHTML = ''; table.innerHTML = '';
-      let total = 0;
+      renderMesesPanel();
+      renderMesesTable();
+    };
 
-      state.meses.forEach((m, index) => {
+    const renderMesesPanel = () => {
+      const container = document.getElementById('meses_container');
+      container.innerHTML = '';
+      state.meses.forEach((m) => {
         const div = document.createElement('div');
         div.className = 'bg-gray-50 p-2 rounded border border-gray-200 mb-2';
         div.innerHTML = `
@@ -252,7 +255,16 @@
           </div>
         `;
         container.appendChild(div);
+      });
+      lucide.createIcons();
+    };
 
+    const renderMesesTable = () => {
+      const table = document.getElementById('out_meses_table');
+      table.innerHTML = '';
+      let total = 0;
+
+      state.meses.forEach((m) => {
         table.innerHTML += `
           <tr>
             <td class="w-40 py-[1px]">${m.mes}</td>
@@ -271,84 +283,57 @@
         </tr>
       `;
       document.getElementById('out_meses_count').innerText = state.meses.length.toString().padStart(2, '0');
-      lucide.createIcons();
     };
 
-    // --- NOVA LOGICA DE PDF USANDO HTML2CANVAS + JSPDF DIRETAMENTE ---
     window.downloadPDF = async () => {
       const btn = document.getElementById('btn-download');
       const btnText = document.getElementById('btn-text');
       const element = document.getElementById('document-page');
-      
       btn.disabled = true;
       btnText.innerText = "A processar...";
-
-      // Para evitar problemas de scroll e margens, criamos um clone limpo
       const clone = element.cloneNode(true);
-      Object.assign(clone.style, {
-        position: 'fixed',
-        top: '0',
-        left: '0',
-        margin: '0',
-        boxShadow: 'none',
-        zIndex: '-1000'
-      });
+      Object.assign(clone.style, { position: 'fixed', top: '0', left: '0', margin: '0', boxShadow: 'none', zIndex: '-1000' });
       document.body.appendChild(clone);
-
       try {
-        const canvas = await html2canvas(clone, {
-          scale: 3, // Alta qualidade
-          useCORS: true,
-          logging: false,
-          width: 793.7, // Largura exata de 210mm a 96dpi
-          height: 1122.5, // Altura exata de 297mm a 96dpi
-          x: 0,
-          y: 0
-        });
-
+        const canvas = await html2canvas(clone, { scale: 3, useCORS: true, logging: false, width: 793.7, height: 1122.5, x: 0, y: 0 });
         const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({
-          orientation: 'portrait',
-          unit: 'mm',
-          format: 'a4',
-          compress: true
-        });
-
-        // Adicionamos a imagem ocupando 100% da folha sem margens do jsPDF
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
         pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
         pdf.save(`Declaracao_Faturamento_${state.empresa.replace(/\s+/g, '_')}.pdf`);
-
-      } catch (err) {
-        console.error("Erro no PDF:", err);
-      } finally {
+      } catch (err) { console.error("Erro no PDF:", err); } finally {
         document.body.removeChild(clone);
         btn.disabled = false;
         btnText.innerText = "Baixar PDF";
       }
     };
 
+    // Escutador de eventos corrigido: Atualiza apenas a tabela do documento para não perder o foco
     document.getElementById('meses_container').addEventListener('input', (e) => {
       if(e.target.classList.contains('mes-input')) {
         const id = parseInt(e.target.getAttribute('data-id'));
         const field = e.target.getAttribute('data-field');
         const mes = state.meses.find(m => m.id === id);
         if(mes) {
-          if (field === 'valor') e.target.value = maskCurrency(e.target.value);
-          mes[field] = e.target.value;
-          renderMeses();
+          let value = e.target.value;
+          if (field === 'valor') {
+             value = maskCurrency(value);
+             e.target.value = value; // Atualiza o próprio input com a máscara
+          }
+          mes[field] = value;
+          renderMesesTable(); // <--- CHAMA APENAS A TABELA, NÃO O PAINEL
         }
       }
     });
 
     window.addMes = () => {
       state.meses.push({ id: Date.now(), mes: 'Janeiro', ano: '2026', valor: '0,00' });
-      renderMeses();
+      renderMeses(); // Aqui pode re-renderizar tudo pois a lista mudou
     };
 
     window.removeMes = (id) => {
       if(state.meses.length > 1) {
         state.meses = state.meses.filter(m => m.id !== id);
-        renderMeses();
+        renderMeses(); // Aqui pode re-renderizar tudo pois a lista mudou
       }
     };
 
@@ -360,5 +345,3 @@
   </script>
 </body>
 </html>
-
-
