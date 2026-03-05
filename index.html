@@ -164,7 +164,7 @@
   </div>
 
   <!-- ÁREA DO DOCUMENTO -->
-  <div class="flex-1 overflow-y-auto bg-gray-300 print:bg-white flex justify-center p-4 sm:p-8 print:p-0">
+  <div id="document-wrapper" class="flex-1 overflow-y-auto bg-gray-300 print:bg-white flex justify-center p-4 sm:p-8 print:p-0">
     <div 
       id="document-page"
       class="bg-white shadow-2xl print:shadow-none relative flex flex-col mx-auto"
@@ -371,9 +371,16 @@
     window.downloadPDF = () => {
       const element = document.getElementById('document-page');
       
-      // Configurações do PDF
+      // Armazena estilos originais para restaurar depois
+      const originalMargin = element.style.margin;
+      const originalBoxShadow = element.style.boxShadow;
+
+      // REMOVE O MX-AUTO TEMPORARIAMENTE PARA O PDF NÃO SAIR DESLOCADO
+      element.style.margin = '0';
+      element.style.boxShadow = 'none';
+
       const opt = {
-        margin: 0,
+        margin: [0, 0, 0, 0], // Margem zero absoluta no PDF
         filename: `Declaracao_Faturamento_${state.empresa.replace(/\s+/g, '_')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
@@ -381,13 +388,18 @@
           useCORS: true,
           letterRendering: true,
           scrollX: 0,
-          scrollY: 0
+          scrollY: 0,
+          x: 0, // Inicia a captura exatamente no ponto 0 do elemento
+          y: 0
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      // Gerar e salvar
-      html2pdf().set(opt).from(element).save();
+      // Gerar e salvar, depois restaurar a visualização da UI
+      html2pdf().set(opt).from(element).save().then(() => {
+        element.style.margin = originalMargin;
+        element.style.boxShadow = originalBoxShadow;
+      });
     };
 
     // DELEGAÇÃO DE EVENTOS PARA INPUTS DINÂMICOS
