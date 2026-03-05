@@ -68,11 +68,12 @@
           <i data-lucide="printer" class="w-4 h-4"></i> Imprimir
         </button>
         <button 
+          id="btn-download"
           onclick="downloadPDF()"
           class="flex-1 flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 transition text-sm font-bold"
           title="Baixar PDF com fundo timbrado"
         >
-          <i data-lucide="download" class="w-4 h-4"></i> Baixar PDF
+          <i data-lucide="download" class="w-4 h-4"></i> <span>Baixar PDF</span>
         </button>
       </div>
     </div>
@@ -367,22 +368,35 @@
       countLabel.innerText = state.meses.length < 10 ? `0${state.meses.length}` : state.meses.length;
     };
 
-    // GERAR PDF COM FUNDO (Corrigido para evitar margem e página em branco)
+    // GERAR PDF COM FUNDO (Corrigido com Clone Isolado)
     window.downloadPDF = () => {
+      const btn = document.getElementById('btn-download');
       const element = document.getElementById('document-page');
       
-      // Salva estilos originais
-      const originalMargin = element.style.margin;
-      const originalBoxShadow = element.style.boxShadow;
-      const originalHeight = element.style.height;
-      const originalMinHeight = element.style.minHeight;
+      // Feedback no botão
+      const originalBtnText = btn.innerHTML;
+      btn.innerHTML = "A gerar...";
+      btn.disabled = true;
 
-      // FIXAÇÃO ESTRITA PARA O PDF
-      element.style.margin = '0';
-      element.style.boxShadow = 'none';
-      element.style.height = '297mm'; // Altura exata do A4
-      element.style.minHeight = '297mm';
-      element.style.overflow = 'hidden'; // Impede sangramento de conteúdo
+      // CRIAR UM CLONE ISOLADO PARA EVITAR MARGENS DE LAYOUT E PÁGINA EM BRANCO
+      const clone = element.cloneNode(true);
+      
+      // Limpar estilos de layout no clone
+      clone.style.margin = '0';
+      clone.style.boxShadow = 'none';
+      clone.style.width = '210mm';
+      clone.style.height = '296.8mm'; // Ligeiramente menor que 297mm para evitar página em branco
+      clone.style.position = 'relative';
+
+      // Container invisível para o clone
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.top = '-10000px';
+      container.style.left = '0';
+      container.style.width = '210mm';
+      container.style.background = 'white';
+      container.appendChild(clone);
+      document.body.appendChild(container);
 
       const opt = {
         margin: 0,
@@ -394,22 +408,24 @@
           letterRendering: true,
           scrollX: 0,
           scrollY: 0,
-          windowWidth: document.documentElement.offsetWidth,
-          x: 0, 
-          y: 0
+          width: 793.7, // 210mm em pixels a 96dpi
+          height: 1122.5 // 297mm em pixels a 96dpi
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] } // Força a não quebrar páginas
+        pagebreak: { mode: 'avoid-all' }
       };
 
-      // Executa a geração
-      html2pdf().set(opt).from(element).save().then(() => {
-        // Restaura a visualização da tela
-        element.style.margin = originalMargin;
-        element.style.boxShadow = originalBoxShadow;
-        element.style.height = originalHeight;
-        element.style.minHeight = originalMinHeight;
-        element.style.overflow = '';
+      // Executa a geração a partir do CLONE
+      html2pdf().set(opt).from(clone).save().then(() => {
+        document.body.removeChild(container);
+        btn.innerHTML = originalBtnText;
+        btn.disabled = false;
+        lucide.createIcons();
+      }).catch(err => {
+        console.error(err);
+        document.body.removeChild(container);
+        btn.innerHTML = originalBtnText;
+        btn.disabled = false;
       });
     };
 
