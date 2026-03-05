@@ -11,8 +11,9 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   
-  <!-- HTML2PDF Library -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- Bibliotecas Base para PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
     @media print {
@@ -27,7 +28,6 @@
       .print-hidden {
         display: none !important;
       }
-      /* Remove o fundo na impressão padrão do navegador */
       #document-page {
         background-image: none !important;
         box-shadow: none !important;
@@ -35,21 +35,27 @@
       }
     }
     
-    /* Melhoria visual para inputs focados */
     input:focus {
       border-color: #014167;
       box-shadow: 0 0 0 2px rgba(1, 65, 103, 0.2);
     }
 
-    /* Esconde barra de rolagem no PDF se necessário */
     .no-scrollbar::-webkit-scrollbar {
       display: none;
+    }
+
+    /* Container para renderização oculta do PDF */
+    #pdf-render-container {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      width: 210mm;
     }
   </style>
 </head>
 <body class="min-h-screen bg-gray-100 flex flex-col md:flex-row font-sans text-black">
 
-  <!-- PAINEL DE CONTROLE (Oculto na impressão) -->
+  <!-- PAINEL DE CONTROLE -->
   <div class="w-full md:w-1/3 lg:w-1/4 bg-white border-r shadow-lg flex flex-col print:hidden h-screen overflow-y-auto">
     <div class="p-4 bg-[#014167] text-white flex flex-col gap-3 sticky top-0 z-10 shadow-md">
       <div class="flex items-center justify-between">
@@ -63,7 +69,6 @@
         <button 
           onclick="window.print()"
           class="flex-1 flex items-center justify-center gap-1 bg-white text-[#014167] px-3 py-2 rounded hover:bg-gray-100 transition text-sm font-bold"
-          title="Imprimir sem o fundo (para papel físico)"
         >
           <i data-lucide="printer" class="w-4 h-4"></i> Imprimir
         </button>
@@ -71,95 +76,55 @@
           id="btn-download"
           onclick="downloadPDF()"
           class="flex-1 flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 transition text-sm font-bold"
-          title="Baixar PDF com fundo timbrado"
         >
-          <i data-lucide="download" class="w-4 h-4"></i> <span>Baixar PDF</span>
+          <i data-lucide="download" class="w-4 h-4"></i> <span id="btn-text">Baixar PDF</span>
         </button>
       </div>
     </div>
 
     <div class="p-4 space-y-6">
-      
-      <!-- Seção Empresa -->
       <section>
         <h2 class="text-sm font-bold text-gray-500 uppercase flex items-center gap-2 mb-3 border-b pb-1">
           <i data-lucide="building" class="w-4 h-4"></i> Dados da Empresa
         </h2>
         <div class="space-y-3">
-          <div>
-            <label class="block text-xs font-semibold mb-1">Nome da Empresa</label>
-            <input type="text" id="in_empresa" class="w-full p-2 border rounded text-sm outline-none" />
+          <input type="text" id="in_empresa" placeholder="Empresa" class="w-full p-2 border rounded text-sm outline-none" />
+          <div class="grid grid-cols-2 gap-2">
+            <input type="text" id="in_cnpj" placeholder="CNPJ" class="w-full p-2 border rounded text-sm outline-none" />
+            <input type="text" id="in_jucesp" placeholder="Jucesp" class="w-full p-2 border rounded text-sm outline-none" />
           </div>
           <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-xs font-semibold mb-1">C.N.P.J.</label>
-              <input type="text" id="in_cnpj" class="w-full p-2 border rounded text-sm outline-none" />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold mb-1">Jucesp</label>
-              <input type="text" id="in_jucesp" class="w-full p-2 border rounded text-sm outline-none" />
-            </div>
+            <input type="text" id="in_ie" placeholder="Insc. Estadual" class="w-full p-2 border rounded text-sm outline-none" />
+            <input type="text" id="in_dataAbertura" placeholder="Data" class="w-full p-2 border rounded text-sm outline-none" />
           </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-xs font-semibold mb-1">Insc. Estadual</label>
-              <input type="text" id="in_ie" class="w-full p-2 border rounded text-sm outline-none" />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold mb-1">Data</label>
-              <input type="text" id="in_dataAbertura" class="w-full p-2 border rounded text-sm outline-none" />
-            </div>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold mb-1">Endereço</label>
-            <input type="text" id="in_endereco" class="w-full p-2 border rounded text-sm outline-none" />
-          </div>
+          <input type="text" id="in_endereco" placeholder="Endereço" class="w-full p-2 border rounded text-sm outline-none" />
         </div>
       </section>
 
-      <!-- Seção Faturamento -->
       <section>
         <h2 class="text-sm font-bold text-gray-500 uppercase flex items-center gap-2 mb-3 border-b pb-1">
           <i data-lucide="file-text" class="w-4 h-4"></i> Meses de Faturamento
         </h2>
-        <div class="space-y-2">
-          <div id="meses_container">
-            <!-- Meses renderizados via JS -->
-          </div>
-          <button onclick="addMes()" class="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded hover:bg-gray-50 hover:text-[#014167] transition flex justify-center items-center gap-2 font-semibold text-sm">
-            <i data-lucide="plus" class="w-4 h-4"></i> Adicionar Mês
-          </button>
-        </div>
+        <div id="meses_container"></div>
+        <button onclick="addMes()" class="w-full mt-2 py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded hover:bg-gray-50 text-sm font-bold uppercase">
+          + Adicionar Mês
+        </button>
       </section>
 
-      <!-- Seção Emissão e Assinatura -->
       <section>
         <h2 class="text-sm font-bold text-gray-500 uppercase flex items-center gap-2 mb-3 border-b pb-1">
           <i data-lucide="pen-tool" class="w-4 h-4"></i> Emissão e Assinatura
         </h2>
-        <div class="space-y-3">
-          <div>
-            <label class="block text-xs font-semibold mb-1">Local e Data</label>
-            <input type="text" id="in_localData" class="w-full p-2 border rounded text-sm outline-none" />
+        <input type="text" id="in_localData" placeholder="Local e Data" class="w-full p-2 border rounded text-sm outline-none mb-2" />
+        <div class="bg-blue-50 p-3 rounded border border-blue-100 space-y-2">
+          <input type="text" id="in_nomeAssinatura" placeholder="Nome do Cliente" class="w-full p-2 border rounded text-sm outline-none" />
+          <div class="flex gap-2">
+            <input type="text" id="in_rgAssinatura" placeholder="RG" class="w-2/3 p-2 border rounded text-sm outline-none" />
+            <input type="text" id="in_estadoRg" placeholder="UF" class="w-1/3 p-2 border rounded text-sm outline-none uppercase" maxlength="2" />
           </div>
-          <div class="bg-blue-50 p-3 rounded border border-blue-100 mt-2">
-            <p class="text-xs font-semibold text-[#014167] mb-2">Assinatura Direita (Cliente)</p>
-            <div class="space-y-2">
-              <input type="text" id="in_nomeAssinatura" placeholder="Nome" class="w-full p-2 border rounded text-sm outline-none" />
-              <div class="flex gap-2">
-                <input type="text" id="in_rgAssinatura" placeholder="RG" class="w-2/3 p-2 border rounded text-sm outline-none" />
-                <input type="text" id="in_estadoRg" placeholder="UF" class="w-1/3 p-2 border rounded text-sm uppercase outline-none" maxlength="2" />
-              </div>
-              <input type="text" id="in_cpfAssinatura" placeholder="CPF ou CNPJ" class="w-full p-2 border rounded text-sm outline-none" />
-            </div>
-          </div>
-          <div class="bg-gray-50 p-3 rounded border border-gray-200">
-             <p class="text-xs font-semibold text-gray-600 mb-1">Assinatura Esquerda (Fixo)</p>
-             <p class="text-xs text-gray-500">Reynaldo da Silva Moraes<br/>CRC-1SP188092/O-4<br/>CPF-154.274.198-02</p>
-          </div>
+          <input type="text" id="in_cpfAssinatura" placeholder="CPF/CNPJ" class="w-full p-2 border rounded text-sm outline-none" />
         </div>
       </section>
-
       <div class="pb-10"></div>
     </div>
   </div>
@@ -169,28 +134,25 @@
     <div 
       id="document-page"
       class="bg-white shadow-2xl print:shadow-none relative flex flex-col mx-auto"
-      style="width: 210mm; min-height: 297mm; padding: 35mm 20mm 20mm 20mm; box-sizing: border-box; background-image: url('Timbrado.png'); background-size: 100% 100%; background-position: center; background-repeat: no-repeat; font-family: 'Times New Roman', Times, serif;"
+      style="width: 210mm; min-height: 297mm; height: 297mm; padding: 35mm 20mm 20mm 20mm; box-sizing: border-box; background-image: url('Timbrado.png'); background-size: 100% 100%; background-position: center; background-repeat: no-repeat; font-family: 'Times New Roman', Times, serif;"
     >
       <div class="text-center mb-6">
         <h1 class="text-[16px] uppercase font-bold">FATURAMENTO</h1>
       </div>
 
       <div class="mb-6 text-[15px] leading-[1.4]">
-        <p><span>Empresa:</span> <span id="out_empresa"></span></p>
-        <p><span>C.N.P.J.:</span> <span id="out_cnpj"></span></p>
-        <p><span>Jucesp:</span> <span id="out_jucesp"></span></p>
-        <p><span>Insc. Estadual:</span> <span id="out_ie"></span></p>
-        <p><span>Data:</span> <span id="out_dataAbertura"></span></p>
-        <p><span>Endereço:</span> <span id="out_endereco"></span></p>
+        <p><span>Empresa:</span> <span id="out_empresa" class="font-bold"></span></p>
+        <p><span>C.N.P.J.:</span> <span id="out_cnpj" class="font-bold"></span></p>
+        <p><span>Jucesp:</span> <span id="out_jucesp" class="font-bold"></span></p>
+        <p><span>Insc. Estadual:</span> <span id="out_ie" class="font-bold"></span></p>
+        <p><span>Data:</span> <span id="out_dataAbertura" class="font-bold"></span></p>
+        <p><span>Endereço:</span> <span id="out_endereco" class="font-bold"></span></p>
       </div>
 
       <div class="mb-6">
         <h2 class="font-bold text-[15px] mb-4 text-center uppercase">RECEITA FISCAL - ÚLTIMOS <span id="out_meses_count"></span> MESES</h2>
-        
         <table class="w-full max-w-[480px] mx-auto text-[15px]">
-          <tbody id="out_meses_table">
-            <!-- Tabela renderizada via JS -->
-          </tbody>
+          <tbody id="out_meses_table"></tbody>
         </table>
       </div>
 
@@ -202,8 +164,7 @@
         <div class="w-[250px] flex flex-col items-center text-center">
           <div class="w-full border-t border-black mb-1"></div>
           <p class="font-bold">Reynaldo da Silva Moraes</p>
-          <p class="font-bold">CRC: 1SP188092/O-4</p>
-          <p class="font-bold">CPF: 154.274.198-02</p>
+          <p class="font-bold text-xs uppercase">Contador - CRC: 1SP188092/O-4</p>
         </div>
 
         <div class="w-[250px] flex flex-col items-center text-center">
@@ -217,7 +178,8 @@
   </div>
 
   <script>
-    // ESTADO DA APLICAÇÃO
+    const { jsPDF } = window.jspdf;
+
     const state = {
       empresa: 'NOME DA EMPRESA',
       cnpj: '00.000.000/0000-00',
@@ -225,7 +187,7 @@
       ie: '000.000.000.000',
       dataAbertura: '00/00/0000',
       endereco: 'Rua, 00 - Bairro - Cidade/UF',
-      localData: 'São Miguel Arcanjo, 00 de Mês de 0000',
+      localData: 'São Miguel Arcanjo, 05 de Março de 2026',
       meses: [
         { id: 1, mes: 'Dezembro', ano: '2025', valor: '0,00' },
         { id: 2, mes: 'Janeiro', ano: '2026', valor: '0,00' },
@@ -246,241 +208,155 @@
       cpfAssinatura: '000.000.000-00'
     };
 
-    // --- FUNÇÕES DE FORMATAÇÃO (REGEX) ---
-
-    const maskCurrency = (value) => {
-      let cleanValue = value.replace(/\D/g, "");
-      let options = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
-      let result = (Number(cleanValue) / 100).toLocaleString('pt-BR', options);
-      return result;
+    const maskCurrency = (v) => {
+      let val = v.replace(/\D/g, "");
+      return (Number(val) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
 
-    const parseValor = (str) => {
-      if (!str) return 0;
-      const numStr = str.replace(/\./g, '').replace(',', '.');
-      const val = parseFloat(numStr);
-      return isNaN(val) ? 0 : val;
-    };
-
-    const formatCurrency = (val) => {
-      return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    };
-
-    // --- LOGICA DE BINDING ---
+    const parseValor = (s) => parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+    const formatCurrency = (v) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const bindField = (key) => {
       const input = document.getElementById(`in_${key}`);
       const output = document.getElementById(`out_${key}`);
-      
       if (input) {
         input.value = state[key];
         input.addEventListener('input', (e) => {
           state[key] = e.target.value;
           if (output) output.innerText = key === 'estadoRg' ? e.target.value.toUpperCase() : e.target.value;
-          if (key === 'rgAssinatura') checkRgVisibility();
-          if (key === 'cpfAssinatura') updateCpfLabel();
+          if (key === 'rgAssinatura') document.getElementById('out_rg_container').style.display = state.rgAssinatura ? 'block' : 'none';
+          if (key === 'cpfAssinatura') document.getElementById('out_cpf_label').innerText = state.cpfAssinatura.replace(/\D/g, '').length > 11 ? 'CNPJ' : 'CPF';
         });
       }
-      
-      if (output) {
-        output.innerText = key === 'estadoRg' ? state[key].toUpperCase() : state[key];
-      }
-    };
-
-    const checkRgVisibility = () => {
-      const container = document.getElementById('out_rg_container');
-      container.style.display = state.rgAssinatura ? 'block' : 'none';
-    };
-
-    const updateCpfLabel = () => {
-      const label = document.getElementById('out_cpf_label');
-      label.innerText = state.cpfAssinatura.replace(/\D/g, '').length > 11 ? 'CNPJ' : 'CPF';
+      if (output) output.innerText = key === 'estadoRg' ? state[key].toUpperCase() : state[key];
     };
 
     const renderMeses = () => {
-      renderMesesPanel();
-      renderMesesTable();
-    };
-
-    const renderMesesPanel = () => {
       const container = document.getElementById('meses_container');
-      container.innerHTML = '';
-      
+      const table = document.getElementById('out_meses_table');
+      container.innerHTML = ''; table.innerHTML = '';
+      let total = 0;
+
       state.meses.forEach((m, index) => {
-        const item = document.createElement('div');
-        item.className = 'bg-gray-50 p-2 rounded border border-gray-200 mb-2';
-        item.innerHTML = `
-          <div class="flex gap-2 mb-2">
-            <input type="text" value="${m.mes}" data-id="${m.id}" data-field="mes" placeholder="Mês" class="mes-input w-1/3 p-1 border rounded text-sm outline-none" />
-            <input type="text" value="${m.ano}" data-id="${m.id}" data-field="ano" placeholder="Ano" class="mes-input w-1/4 p-1 border rounded text-sm outline-none" />
-            <input type="text" value="${m.valor}" data-id="${m.id}" data-field="valor" placeholder="Valor" class="mes-input valor-input w-full p-1 border rounded text-sm outline-none font-mono" />
+        const div = document.createElement('div');
+        div.className = 'bg-gray-50 p-2 rounded border border-gray-200 mb-2';
+        div.innerHTML = `
+          <div class="flex gap-1 mb-1">
+            <input type="text" value="${m.mes}" data-id="${m.id}" data-field="mes" class="mes-input flex-1 p-1 border rounded text-xs outline-none" />
+            <input type="text" value="${m.ano}" data-id="${m.id}" data-field="ano" class="mes-input w-16 p-1 border rounded text-xs outline-none" />
           </div>
-          <div class="flex justify-between items-center">
-            <div class="flex gap-1">
-              <button onclick="moveUp(${index})" ${index === 0 ? 'disabled' : ''} class="p-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-30">
-                <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
-              </button>
-              <button onclick="moveDown(${index})" ${index === state.meses.length - 1 ? 'disabled' : ''} class="p-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-30">
-                <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i>
-              </button>
-            </div>
-            <button onclick="removeMes(${m.id})" class="p-1 text-[#014167] hover:bg-gray-200 rounded">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
+          <div class="flex items-center gap-1">
+            <input type="text" value="${m.valor}" data-id="${m.id}" data-field="valor" class="mes-input flex-1 p-1 border rounded text-xs outline-none font-mono" />
+            <button onclick="removeMes(${m.id})" class="p-1 text-red-500 hover:bg-red-50 rounded"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
           </div>
         `;
-        container.appendChild(item);
-      });
-      lucide.createIcons();
-    };
+        container.appendChild(div);
 
-    const renderMesesTable = () => {
-      const table = document.getElementById('out_meses_table');
-      const countLabel = document.getElementById('out_meses_count');
-      table.innerHTML = '';
-      
-      let total = 0;
-      
-      state.meses.forEach(m => {
         table.innerHTML += `
           <tr>
-            <td class="w-40 py-[2px]">${m.mes}</td>
-            <td class="w-40 py-[2px]">${m.ano}</td>
-            <td class="w-5 py-[2px]">R$</td>
-            <td class="w-auto py-[2px] text-right pr-4" style="font-family: 'Times New Roman', serif;">${m.valor}</td>
+            <td class="w-40 py-[1px]">${m.mes}</td>
+            <td class="w-40 py-[1px] text-center">${m.ano}</td>
+            <td class="w-5 py-[1px]">R$</td>
+            <td class="w-auto py-[1px] text-right pr-4 font-bold">${m.valor}</td>
           </tr>
         `;
         total += parseValor(m.valor);
       });
 
       table.innerHTML += `
-        <tr>
-          <td colspan="4" class="h-3 border-t border-gray-300 mt-2"></td>
-        </tr>
+        <tr><td colspan="4" class="h-4 border-t border-black mt-2"></td></tr>
         <tr class="font-bold">
-          <td class="py-1">TOTAL:</td>
-          <td class="py-1"></td>
-          <td class="py-1">R$</td>
-          <td class="py-1 text-right pr-4" style="font-family: 'Times New Roman', serif;">${formatCurrency(total)}</td>
+          <td class="py-1">TOTAL:</td><td></td><td>R$</td>
+          <td class="py-1 text-right pr-4">${formatCurrency(total)}</td>
         </tr>
       `;
-      
-      countLabel.innerText = state.meses.length < 10 ? `0${state.meses.length}` : state.meses.length;
+      document.getElementById('out_meses_count').innerText = state.meses.length.toString().padStart(2, '0');
+      lucide.createIcons();
     };
 
-    // GERAR PDF COM FUNDO (Corrigido com Clone Isolado)
-    window.downloadPDF = () => {
+    // --- NOVA LOGICA DE PDF USANDO HTML2CANVAS + JSPDF DIRETAMENTE ---
+    window.downloadPDF = async () => {
       const btn = document.getElementById('btn-download');
+      const btnText = document.getElementById('btn-text');
       const element = document.getElementById('document-page');
       
-      // Feedback no botão
-      const originalBtnText = btn.innerHTML;
-      btn.innerHTML = "A gerar...";
       btn.disabled = true;
+      btnText.innerText = "A processar...";
 
-      // CRIAR UM CLONE ISOLADO PARA EVITAR MARGENS DE LAYOUT E PÁGINA EM BRANCO
+      // Para evitar problemas de scroll e margens, criamos um clone limpo
       const clone = element.cloneNode(true);
-      
-      // Limpar estilos de layout no clone
-      clone.style.margin = '0';
-      clone.style.boxShadow = 'none';
-      clone.style.width = '210mm';
-      clone.style.height = '296.8mm'; // Ligeiramente menor que 297mm para evitar página em branco
-      clone.style.position = 'relative';
-
-      // Container invisível para o clone
-      const container = document.createElement('div');
-      container.style.position = 'fixed';
-      container.style.top = '-10000px';
-      container.style.left = '0';
-      container.style.width = '210mm';
-      container.style.background = 'white';
-      container.appendChild(clone);
-      document.body.appendChild(container);
-
-      const opt = {
-        margin: 0,
-        filename: `Declaracao_Faturamento_${state.empresa.replace(/\s+/g, '_')}.pdf`,
-        image: { type: 'png', quality: 1 },
-        html2canvas: { 
-          scale: 3, 
-          useCORS: true,
-          letterRendering: true,
-          scrollX: 0,
-          scrollY: 0,
-          width: 2480, // 210mm em pixels a 96dpi
-          height: 3508 // 297mm em pixels a 96dpi
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: 'avoid-all' }
-      };
-
-      // Executa a geração a partir do CLONE
-      html2pdf().set(opt).from(clone).save().then(() => {
-        document.body.removeChild(container);
-        btn.innerHTML = originalBtnText;
-        btn.disabled = false;
-        lucide.createIcons();
-      }).catch(err => {
-        console.error(err);
-        document.body.removeChild(container);
-        btn.innerHTML = originalBtnText;
-        btn.disabled = false;
+      Object.assign(clone.style, {
+        position: 'fixed',
+        top: '0',
+        left: '0',
+        margin: '0',
+        boxShadow: 'none',
+        zIndex: '-1000'
       });
+      document.body.appendChild(clone);
+
+      try {
+        const canvas = await html2canvas(clone, {
+          scale: 3, // Alta qualidade
+          useCORS: true,
+          logging: false,
+          width: 793.7, // Largura exata de 210mm a 96dpi
+          height: 1122.5, // Altura exata de 297mm a 96dpi
+          x: 0,
+          y: 0
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4',
+          compress: true
+        });
+
+        // Adicionamos a imagem ocupando 100% da folha sem margens do jsPDF
+        pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+        pdf.save(`Declaracao_Faturamento_${state.empresa.replace(/\s+/g, '_')}.pdf`);
+
+      } catch (err) {
+        console.error("Erro no PDF:", err);
+      } finally {
+        document.body.removeChild(clone);
+        btn.disabled = false;
+        btnText.innerText = "Baixar PDF";
+      }
     };
 
-    // DELEGAÇÃO DE EVENTOS PARA INPUTS DINÂMICOS
     document.getElementById('meses_container').addEventListener('input', (e) => {
       if(e.target.classList.contains('mes-input')) {
         const id = parseInt(e.target.getAttribute('data-id'));
         const field = e.target.getAttribute('data-field');
         const mes = state.meses.find(m => m.id === id);
-        
         if(mes) {
-          let value = e.target.value;
-          if (field === 'valor') {
-            value = maskCurrency(value);
-            e.target.value = value;
-          }
-          mes[field] = value;
-          renderMesesTable();
+          if (field === 'valor') e.target.value = maskCurrency(e.target.value);
+          mes[field] = e.target.value;
+          renderMeses();
         }
       }
     });
 
     window.addMes = () => {
-      const newId = state.meses.length > 0 ? Math.max(...state.meses.map(m => m.id)) + 1 : 1;
-      state.meses.push({ id: newId, mes: 'Novo Mês', ano: '2026', valor: '0,00' });
+      state.meses.push({ id: Date.now(), mes: 'Janeiro', ano: '2026', valor: '0,00' });
       renderMeses();
     };
 
     window.removeMes = (id) => {
-      state.meses = state.meses.filter(m => m.id !== id);
-      renderMeses();
-    };
-
-    window.moveUp = (index) => {
-      if (index === 0) return;
-      [state.meses[index - 1], state.meses[index]] = [state.meses[index], state.meses[index - 1]];
-      renderMeses();
-    };
-
-    window.moveDown = (index) => {
-      if (index === state.meses.length - 1) return;
-      [state.meses[index + 1], state.meses[index]] = [state.meses[index], state.meses[index + 1]];
-      renderMeses();
+      if(state.meses.length > 1) {
+        state.meses = state.meses.filter(m => m.id !== id);
+        renderMeses();
+      }
     };
 
     document.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
-      const keys = ['empresa', 'cnpj', 'jucesp', 'ie', 'dataAbertura', 'endereco', 'localData', 'nomeAssinatura', 'rgAssinatura', 'estadoRg', 'cpfAssinatura'];
-      keys.forEach(bindField);
-      checkRgVisibility();
-      updateCpfLabel();
+      ['empresa', 'cnpj', 'jucesp', 'ie', 'dataAbertura', 'endereco', 'localData', 'nomeAssinatura', 'rgAssinatura', 'estadoRg', 'cpfAssinatura'].forEach(bindField);
       renderMeses();
     });
   </script>
 </body>
 </html>
-
-
