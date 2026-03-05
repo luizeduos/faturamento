@@ -367,20 +367,25 @@
       countLabel.innerText = state.meses.length < 10 ? `0${state.meses.length}` : state.meses.length;
     };
 
-    // GERAR PDF COM FUNDO
+    // GERAR PDF COM FUNDO (Corrigido para evitar margem e página em branco)
     window.downloadPDF = () => {
       const element = document.getElementById('document-page');
       
-      // Armazena estilos originais para restaurar depois
+      // Salva estilos originais
       const originalMargin = element.style.margin;
       const originalBoxShadow = element.style.boxShadow;
+      const originalHeight = element.style.height;
+      const originalMinHeight = element.style.minHeight;
 
-      // REMOVE O MX-AUTO TEMPORARIAMENTE PARA O PDF NÃO SAIR DESLOCADO
+      // FIXAÇÃO ESTRITA PARA O PDF
       element.style.margin = '0';
       element.style.boxShadow = 'none';
+      element.style.height = '297mm'; // Altura exata do A4
+      element.style.minHeight = '297mm';
+      element.style.overflow = 'hidden'; // Impede sangramento de conteúdo
 
       const opt = {
-        margin: [0, 0, 0, 0], // Margem zero absoluta no PDF
+        margin: 0,
         filename: `Declaracao_Faturamento_${state.empresa.replace(/\s+/g, '_')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
@@ -389,16 +394,22 @@
           letterRendering: true,
           scrollX: 0,
           scrollY: 0,
-          x: 0, // Inicia a captura exatamente no ponto 0 do elemento
+          windowWidth: document.documentElement.offsetWidth,
+          x: 0, 
           y: 0
         },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] } // Força a não quebrar páginas
       };
 
-      // Gerar e salvar, depois restaurar a visualização da UI
+      // Executa a geração
       html2pdf().set(opt).from(element).save().then(() => {
+        // Restaura a visualização da tela
         element.style.margin = originalMargin;
         element.style.boxShadow = originalBoxShadow;
+        element.style.height = originalHeight;
+        element.style.minHeight = originalMinHeight;
+        element.style.overflow = '';
       });
     };
 
