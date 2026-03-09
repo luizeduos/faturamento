@@ -43,13 +43,16 @@
     .no-scrollbar::-webkit-scrollbar {
       display: none;
     }
-
-    /* Container para renderização oculta do PDF */
-    #pdf-render-container {
-      position: absolute;
-      left: -9999px;
-      top: 0;
-      width: 210mm;
+    
+    .title-faturamento {
+      text-align: center;
+      width: 100%;
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
   </style>
 </head>
@@ -84,21 +87,33 @@
 
     <div class="p-4 space-y-6">
       <section>
-        <h2 class="text-sm font-bold text-gray-500 uppercase flex items-center gap-2 mb-3 border-b pb-1">
-          <i data-lucide="building" class="w-4 h-4"></i> Dados da Empresa
-        </h2>
-        <div class="space-y-3">
-          <input type="text" id="in_empresa" placeholder="Empresa" class="w-full p-2 border rounded text-sm outline-none" />
-          <div class="grid grid-cols-2 gap-2">
-            <input type="text" id="in_cnpj" placeholder="CNPJ" class="w-full p-2 border rounded text-sm outline-none" />
-            <input type="text" id="in_jucesp" placeholder="Jucesp" class="w-full p-2 border rounded text-sm outline-none" />
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <input type="text" id="in_ie" placeholder="Insc. Estadual" class="w-full p-2 border rounded text-sm outline-none" />
-            <input type="text" id="in_dataAbertura" placeholder="Data" class="w-full p-2 border rounded text-sm outline-none" />
-          </div>
-          <input type="text" id="in_endereco" placeholder="Endereço" class="w-full p-2 border rounded text-sm outline-none" />
+        <div class="flex items-center justify-between mb-3 border-b pb-1">
+            <h2 class="text-sm font-bold text-gray-500 uppercase flex items-center gap-2">
+                <i data-lucide="building" class="w-4 h-4"></i> Dados Gerais
+            </h2>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <span class="text-[10px] font-bold text-blue-600 uppercase">Consolidado</span>
+                <input type="checkbox" id="in_consolidado" class="sr-only peer">
+                <div class="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all relative"></div>
+            </label>
         </div>
+        
+        <div class="space-y-3">
+          <input type="text" id="in_empresa" placeholder="Nome da Empresa" class="w-full p-2 border rounded text-sm outline-none font-bold" />
+          <input type="text" id="in_ie" placeholder="Inscrição Estadual" class="w-full p-2 border rounded text-sm outline-none" />
+          <input type="text" id="in_endereco" placeholder="Endereço Completo" class="w-full p-2 border rounded text-sm outline-none" />
+          <input type="text" id="in_localData" placeholder="Local e Data de Emissão (Rodapé)" class="w-full p-2 border rounded text-sm outline-none" />
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-sm font-bold text-gray-500 uppercase flex items-center gap-2 mb-3 border-b pb-1">
+          <i data-lucide="layers" class="w-4 h-4"></i> <span id="title_unidades">Unidade / CNPJ</span>
+        </h2>
+        <div id="unidades_container" class="space-y-3"></div>
+        <button id="btn_add_unidade" onclick="addUnidade()" class="w-full mt-2 py-2 border-2 border-dashed border-blue-300 text-blue-500 rounded hover:bg-blue-50 text-sm font-bold uppercase transition">
+          + Adicionar Unidade
+        </button>
       </section>
 
       <section>
@@ -113,11 +128,10 @@
 
       <section>
         <h2 class="text-sm font-bold text-gray-500 uppercase flex items-center gap-2 mb-3 border-b pb-1">
-          <i data-lucide="pen-tool" class="w-4 h-4"></i> Emissão e Assinatura
+          <i data-lucide="pen-tool" class="w-4 h-4"></i> Segunda Assinatura
         </h2>
-        <input type="text" id="in_localData" placeholder="Local e Data" class="w-full p-2 border rounded text-sm outline-none mb-2" />
         <div class="bg-blue-50 p-3 rounded border border-blue-100 space-y-2">
-          <input type="text" id="in_nomeAssinatura" placeholder="Nome do Cliente" class="w-full p-2 border rounded text-sm outline-none" />
+          <input type="text" id="in_nomeAssinatura" placeholder="Nome do Cliente (Vazio p/ centralizar contador)" class="w-full p-2 border rounded text-sm outline-none" />
           <div class="flex gap-2">
             <input type="text" id="in_rgAssinatura" placeholder="RG" class="w-2/3 p-2 border rounded text-sm outline-none" />
             <input type="text" id="in_estadoRg" placeholder="UF" class="w-1/3 p-2 border rounded text-sm outline-none uppercase" maxlength="2" />
@@ -134,24 +148,41 @@
     <div 
       id="document-page"
       class="bg-white shadow-2xl print:shadow-none relative flex flex-col mx-auto"
-      style="width: 210mm; min-height: 297mm; height: 297mm; padding: 35mm 20mm 20mm 20mm; box-sizing: border-box; background-image: url('Timbrado.png'); background-size: 100% 100%; background-position: center; background-repeat: no-repeat; font-family: 'Times New Roman', Times, serif;"
+      style="width: 210mm; min-height: 297mm; padding: 35mm 20mm 20mm 20mm; box-sizing: border-box; background-image: url('Timbrado.png'); background-size: 100% 100%; background-position: center; background-repeat: no-repeat; font-family: 'Times New Roman', Times, serif;"
     >
-      <div class="text-center mb-6">
-        <h1 class="text-[16px] uppercase font-bold">FATURAMENTO</h1>
+      
+      <!-- Título Superior (Centralizado - Apenas Consolidado) -->
+      <div id="out_top_title" class="title-faturamento mb-6 hidden">
+        <h1>FATURAMENTO</h1>
       </div>
 
-      <div class="mb-6 text-[15px] leading-[1.4]">
+      <div id="out_header_details" class="mb-6 text-[15px] leading-[1.4]">
         <p><span>Empresa:</span> <span id="out_empresa" class="font-bold"></span></p>
-        <p><span>C.N.P.J.:</span> <span id="out_cnpj" class="font-bold"></span></p>
-        <p><span>Jucesp:</span> <span id="out_jucesp" class="font-bold"></span></p>
-        <p><span>Insc. Estadual:</span> <span id="out_ie" class="font-bold"></span></p>
-        <p><span>Data:</span> <span id="out_dataAbertura" class="font-bold"></span></p>
+        
+        <!-- Bloco para Dados Simples (Quando não consolidado) -->
+        <div id="out_simple_details">
+            <p><span>C.N.P.J.:</span> <span id="out_simple_cnpj" class="font-bold"></span></p>
+            <p><span>Jucesp:</span> <span id="out_simple_jucesp" class="font-bold"></span></p>
+            <p><span>Insc. Estadual:</span> <span id="out_ie" class="font-bold"></span></p>
+            <p><span>Data:</span> <span id="out_simple_data" class="font-bold"></span></p>
+        </div>
+
         <p><span>Endereço:</span> <span id="out_endereco" class="font-bold"></span></p>
+        
+        <!-- Área Dinâmica de Unidades (Apenas Consolidado) -->
+        <div id="out_unidades_list" class="mt-4 space-y-1"></div>
+      </div>
+
+      <!-- Título Intermediário (Centralizado - Apenas Simples) -->
+      <div id="out_mid_title" class="title-faturamento mb-6">
+        <h1>FATURAMENTO</h1>
       </div>
 
       <div class="mb-6">
-        <h2 class="font-bold text-[15px] mb-4 text-center uppercase">RECEITA FISCAL - ÚLTIMOS <span id="out_meses_count"></span> MESES</h2>
-        <table class="w-full max-w-[480px] mx-auto text-[15px]">
+        <h2 class="font-bold text-[15px] mb-4 text-center uppercase">
+            <span id="out_table_title">RECEITA FISCAL</span> - ÚLTIMOS <span id="out_meses_count"></span> MESES
+        </h2>
+        <table class="w-full max-w-[500px] mx-auto text-[15px]">
           <tbody id="out_meses_table"></tbody>
         </table>
       </div>
@@ -160,20 +191,25 @@
         <p id="out_localData"></p>
       </div>
 
-      <div class="flex justify-between text-[15px] px-2 pb-4 mt-auto mb-10" style="font-family: Calibri, sans-serif;">
-        <div class="w-[250px] flex flex-col items-center text-center">
+      <!-- CONTAINER DE ASSINATURAS -->
+      <div id="out_signature_container" class="flex justify-between text-[15px] px-2 pb-4 mt-auto mb-10" style="font-family: Calibri, sans-serif;">
+        
+        <!-- Assinatura Contador -->
+        <div id="sig_contador" class="w-[250px] flex flex-col items-center text-center">
           <div class="w-full border-t border-black mb-1"></div>
           <p class="font-bold">Reynaldo da Silva Moraes</p>
           <p class="font-bold">CRC: 1SP188092/O-4</p>
           <p class="font-bold">CPF: 154.274.198-02</p>
         </div>
 
-        <div class="w-[250px] flex flex-col items-center text-center">
+        <!-- Assinatura Cliente -->
+        <div id="sig_cliente" class="w-[250px] flex flex-col items-center text-center">
           <div class="w-full border-t border-black mb-1"></div>
           <p class="font-bold" id="out_nomeAssinatura"></p>
           <p class="font-bold" id="out_rg_container">RG: <span id="out_rgAssinatura"></span>/<span id="out_estadoRg"></span></p>
           <p class="font-bold"><span id="out_cpf_label">CPF</span>: <span id="out_cpfAssinatura"></span></p>
         </div>
+
       </div>
     </div>
   </div>
@@ -182,28 +218,18 @@
     const { jsPDF } = window.jspdf;
 
     const state = {
-      empresa: 'NOME DA EMPRESA',
-      cnpj: '00.000.000/0000-00',
-      jucesp: '00.000.000.000',
+      empresa: 'NOME EXEMPLO',
       ie: '000.000.000.000',
-      dataAbertura: '00/00/0000',
       endereco: 'Rua, 00 - Bairro - Cidade/UF',
       localData: 'São Miguel Arcanjo, 05 de Março de 2026',
-      meses: [
-        { id: 1, mes: 'Dezembro', ano: '2025', valor: '0,00' },
-        { id: 2, mes: 'Janeiro', ano: '2026', valor: '0,00' },
-        { id: 3, mes: 'Fevereiro', ano: '2026', valor: '0,00' },
-        { id: 4, mes: 'Março', ano: '2026', valor: '0,00' },
-        { id: 5, mes: 'Abril', ano: '2026', valor: '0,00' },
-        { id: 6, mes: 'Maio', ano: '2026', valor: '0,00' },
-        { id: 7, mes: 'Junho', ano: '2026', valor: '0,00' },
-        { id: 8, mes: 'Julho', ano: '2026', valor: '0,00' },
-        { id: 9, mes: 'Agosto', ano: '2026', valor: '0,00' },
-        { id: 10, mes: 'Setembro', ano: '2026', valor: '0,00' },
-        { id: 11, mes: 'Outubro', ano: '2026', valor: '0,00' },
-        { id: 12, mes: 'Novembro', ano: '2026', valor: '0,00' },
+      consolidado: false,
+      unidades: [
+        { id: 1, cnpj: '00.000.000/0000-00', jucesp: '00.000.000.000', data: '00/00/0000' }
       ],
-      nomeAssinatura: 'Nome Completo',
+      meses: [
+        { id: 1, mes: 'Janeiro', ano: '2026', valor: '0,00' },
+      ],
+      nomeAssinatura: '', 
       rgAssinatura: '00.000.000-0',
       estadoRg: 'SP',
       cpfAssinatura: '000.000.000-00'
@@ -220,127 +246,244 @@
     const bindField = (key) => {
       const input = document.getElementById(`in_${key}`);
       const output = document.getElementById(`out_${key}`);
-      if (input) {
+      if (!input) return;
+
+      if (input.type === 'checkbox') {
+        input.checked = state[key];
+        input.addEventListener('change', (e) => {
+          state[key] = e.target.checked;
+          updateLayoutMode();
+        });
+      } else {
         input.value = state[key];
         input.addEventListener('input', (e) => {
           state[key] = e.target.value;
           if (output) output.innerText = key === 'estadoRg' ? e.target.value.toUpperCase() : e.target.value;
-          if (key === 'rgAssinatura') document.getElementById('out_rg_container').style.display = state.rgAssinatura ? 'block' : 'none';
-          if (key === 'cpfAssinatura') document.getElementById('out_cpf_label').innerText = state.cpfAssinatura.replace(/\D/g, '').length > 11 ? 'CNPJ' : 'CPF';
+          
+          if (key === 'nomeAssinatura') updateSignatureLayout();
+          if (key === 'cpfAssinatura') {
+              const label = document.getElementById('out_cpf_label');
+              if (label) label.innerText = state.cpfAssinatura.replace(/\D/g, '').length > 11 ? 'CNPJ' : 'CPF';
+          }
         });
       }
       if (output) output.innerText = key === 'estadoRg' ? state[key].toUpperCase() : state[key];
     };
 
-    // Separamos a renderização do Painel (Sidebar) da Tabela (Documento)
-    const renderMeses = () => {
-      renderMesesPanel();
-      renderMesesTable();
+    const updateLayoutMode = () => {
+        const isConsolidado = state.consolidado;
+        
+        const topTitle = document.getElementById('out_top_title');
+        const midTitle = document.getElementById('out_mid_title');
+        const simpleDetails = document.getElementById('out_simple_details');
+        const unitsList = document.getElementById('out_unidades_list');
+        const tableTitle = document.getElementById('out_table_title');
+        
+        const btnAdd = document.getElementById('btn_add_unidade');
+        const titleUnidades = document.getElementById('title_unidades');
+
+        if (isConsolidado) {
+            topTitle.classList.remove('hidden');
+            midTitle.classList.add('hidden');
+            simpleDetails.classList.add('hidden');
+            unitsList.classList.remove('hidden');
+            tableTitle.innerText = 'RECEITA FISCAL CONSOLIDADA';
+            btnAdd.classList.remove('hidden');
+            titleUnidades.innerText = 'Unidades / Filiais';
+        } else {
+            topTitle.classList.add('hidden');
+            midTitle.classList.remove('hidden');
+            simpleDetails.classList.remove('hidden');
+            unitsList.classList.add('hidden');
+            tableTitle.innerText = 'RECEITA FISCAL';
+            btnAdd.classList.add('hidden');
+            titleUnidades.innerText = 'Dados do CNPJ';
+            
+            if (state.unidades.length > 1) {
+                state.unidades = [state.unidades[0]];
+                renderUnidades();
+            }
+        }
+        renderUnidadesDocOnly();
     };
 
-    const renderMesesPanel = () => {
+    const updateSignatureLayout = () => {
+        const container = document.getElementById('out_signature_container');
+        const sigCliente = document.getElementById('sig_cliente');
+        if (!state.nomeAssinatura || state.nomeAssinatura.trim() === "") {
+            container.classList.remove('justify-between');
+            container.classList.add('justify-center');
+            sigCliente.classList.add('hidden');
+        } else {
+            container.classList.remove('justify-center');
+            container.classList.add('justify-between');
+            sigCliente.classList.remove('hidden');
+        }
+    };
+
+    const renderUnidades = () => {
+        const container = document.getElementById('unidades_container');
+        container.innerHTML = '';
+        
+        state.unidades.forEach(u => {
+            const card = document.createElement('div');
+            card.className = 'bg-blue-50 p-2 rounded border border-blue-100 space-y-2 relative group';
+            card.innerHTML = `
+                ${state.consolidado ? `<button onclick="removeUnidade(${u.id})" class="absolute top-1 right-1 p-1 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition"><i data-lucide="x-circle" class="w-4 h-4"></i></button>` : ''}
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" value="${u.cnpj}" placeholder="CNPJ" oninput="updateUnidade(${u.id}, 'cnpj', this.value)" class="p-1 border rounded text-xs outline-none font-bold" />
+                    <input type="text" value="${u.jucesp}" placeholder="Jucesp" oninput="updateUnidade(${u.id}, 'jucesp', this.value)" class="p-1 border rounded text-xs outline-none" />
+                </div>
+                <input type="text" value="${u.data}" placeholder="Data de Abertura" oninput="updateUnidade(${u.id}, 'data', this.value)" class="w-full p-1 border rounded text-xs outline-none" />
+            `;
+            container.appendChild(card);
+        });
+        
+        renderUnidadesDocOnly();
+        lucide.createIcons();
+    };
+
+    window.addUnidade = () => {
+        state.unidades.push({ id: Date.now(), cnpj: '', jucesp: '', data: '' });
+        renderUnidades();
+    };
+
+    window.removeUnidade = (id) => {
+        if (state.unidades.length > 1) {
+            state.unidades = state.unidades.filter(u => u.id !== id);
+            renderUnidades();
+        }
+    };
+
+    window.updateUnidade = (id, field, value) => {
+        const unit = state.unidades.find(u => u.id === id);
+        if (unit) {
+            unit[field] = value;
+            renderUnidadesDocOnly();
+        }
+    };
+
+    const renderUnidadesDocOnly = () => {
+        const list = document.getElementById('out_unidades_list');
+        const simpleCnpj = document.getElementById('out_simple_cnpj');
+        const simpleJucesp = document.getElementById('out_simple_jucesp');
+        const simpleData = document.getElementById('out_simple_data');
+        
+        list.innerHTML = '';
+        
+        state.unidades.forEach((u, index) => {
+            if (index === 0) {
+                simpleCnpj.innerText = u.cnpj;
+                simpleJucesp.innerText = u.jucesp;
+                simpleData.innerText = u.data;
+            }
+
+            list.innerHTML += `
+                <div class="grid grid-cols-[1.2fr_1fr_1fr] gap-4 py-0.5">
+                    <p><span>C.N.P.J.:</span> <span class="font-bold">${u.cnpj}</span></p>
+                    <p><span>Jucesp:</span> <span class="font-bold">${u.jucesp}</span></p>
+                    <p><span>Data:</span> <span class="font-bold">${u.data}</span></p>
+                </div>
+            `;
+        });
+    };
+
+    const renderMeses = () => {
       const container = document.getElementById('meses_container');
       container.innerHTML = '';
+      
       state.meses.forEach((m) => {
         const div = document.createElement('div');
         div.className = 'bg-gray-50 p-2 rounded border border-gray-200 mb-2';
         div.innerHTML = `
           <div class="flex gap-1 mb-1">
-            <input type="text" value="${m.mes}" data-id="${m.id}" data-field="mes" class="mes-input flex-1 p-1 border rounded text-xs outline-none" />
-            <input type="text" value="${m.ano}" data-id="${m.id}" data-field="ano" class="mes-input w-16 p-1 border rounded text-xs outline-none" />
+            <input type="text" value="${m.mes}" oninput="updateMes(${m.id}, 'mes', this.value)" class="flex-1 p-1 border rounded text-xs outline-none" />
+            <input type="text" value="${m.ano}" oninput="updateMes(${m.id}, 'ano', this.value)" class="w-16 p-1 border rounded text-xs outline-none" />
           </div>
           <div class="flex items-center gap-1">
-            <input type="text" value="${m.valor}" data-id="${m.id}" data-field="valor" class="mes-input flex-1 p-1 border rounded text-xs outline-none font-mono" />
+            <input type="text" value="${m.valor}" oninput="updateMes(${m.id}, 'valor', this.value, true)" class="flex-1 p-1 border rounded text-xs outline-none font-mono" />
             <button onclick="removeMes(${m.id})" class="p-1 text-red-500 hover:bg-red-50 rounded"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
           </div>
         `;
         container.appendChild(div);
       });
+
+      renderMesesTableOnly();
       lucide.createIcons();
     };
 
-    const renderMesesTable = () => {
-      const table = document.getElementById('out_meses_table');
-      table.innerHTML = '';
-      let total = 0;
-
-      state.meses.forEach((m) => {
-        table.innerHTML += `
-          <tr>
-            <td class="w-40 py-[1px]">${m.mes}</td>
-            <td class="w-40 py-[1px] text-center">${m.ano}</td>
-            <td class="w-5 py-[1px]">R$</td>
-            <td class="w-auto py-[1px] text-right pr-4 font-bold">${m.valor}</td>
-          </tr>
-        `;
-        total += parseValor(m.valor);
-      });
-
-      table.innerHTML += `
-        <tr class="font-bold h-4">
-          <td class="py-1">TOTAL:</td><td></td><td>R$</td>
-          <td class="py-1 text-right pr-4">${formatCurrency(total)}</td>
-        </tr>
-      `;
-      document.getElementById('out_meses_count').innerText = state.meses.length.toString().padStart(2, '0');
-    };
-
-    window.downloadPDF = async () => {
-      const btn = document.getElementById('btn-download');
-      const btnText = document.getElementById('btn-text');
-      const element = document.getElementById('document-page');
-      btn.disabled = true;
-      btnText.innerText = "A processar...";
-      const clone = element.cloneNode(true);
-      Object.assign(clone.style, { position: 'fixed', top: '0', left: '0', margin: '0', boxShadow: 'none', zIndex: '-1000' });
-      document.body.appendChild(clone);
-      try {
-        const canvas = await html2canvas(clone, { scale: 3, useCORS: true, logging: false, width: 793.7, height: 1122.5, x: 0, y: 0 });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
-        pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
-        pdf.save(`Declaracao_Faturamento_${state.empresa.replace(/\s+/g, '_')}.pdf`);
-      } catch (err) { console.error("Erro no PDF:", err); } finally {
-        document.body.removeChild(clone);
-        btn.disabled = false;
-        btnText.innerText = "Baixar PDF";
-      }
-    };
-
-    // Escutador de eventos corrigido: Atualiza apenas a tabela do documento para não perder o foco
-    document.getElementById('meses_container').addEventListener('input', (e) => {
-      if(e.target.classList.contains('mes-input')) {
-        const id = parseInt(e.target.getAttribute('data-id'));
-        const field = e.target.getAttribute('data-field');
-        const mes = state.meses.find(m => m.id === id);
-        if(mes) {
-          let value = e.target.value;
-          if (field === 'valor') {
-             value = maskCurrency(value);
-             e.target.value = value; // Atualiza o próprio input com a máscara
-          }
-          mes[field] = value;
-          renderMesesTable(); // <--- CHAMA APENAS A TABELA, NÃO O PAINEL
-        }
-      }
-    });
-
     window.addMes = () => {
-      state.meses.push({ id: Date.now(), mes: 'Janeiro', ano: '2026', valor: '0,00' });
-      renderMeses(); // Aqui pode re-renderizar tudo pois a lista mudou
+      const last = state.meses[state.meses.length - 1];
+      state.meses.push({ id: Date.now(), mes: 'Mês', ano: last ? last.ano : '2026', valor: '0,00' });
+      renderMeses();
     };
 
     window.removeMes = (id) => {
       if(state.meses.length > 1) {
         state.meses = state.meses.filter(m => m.id !== id);
-        renderMeses(); // Aqui pode re-renderizar tudo pois a lista mudou
+        renderMeses();
+      }
+    };
+
+    window.updateMes = (id, field, value, isCurrency = false) => {
+        const mes = state.meses.find(m => m.id === id);
+        if (mes) {
+            if (isCurrency) {
+                value = maskCurrency(value);
+                event.target.value = value;
+            }
+            mes[field] = value;
+            renderMesesTableOnly();
+        }
+    };
+
+    const renderMesesTableOnly = () => {
+        const table = document.getElementById('out_meses_table');
+        table.innerHTML = '';
+        let total = 0;
+        state.meses.forEach(m => {
+            table.innerHTML += `
+              <tr>
+                <td class="w-40 py-[1px] text-[15px]">${m.mes}</td>
+                <td class="w-40 py-[1px] text-center text-[15px]">${m.ano}</td>
+                <td class="w-5 py-[1px] text-[15px]">R$</td>
+                <td class="w-auto py-[1px] text-right pr-4 font-bold text-[15px]">${m.valor}</td>
+              </tr>`;
+            total += parseValor(m.valor);
+        });
+        table.innerHTML += `<tr class="font-bold h-4 text-[15px]"><td class="py-1">TOTAL:</td><td></td><td>R$</td><td class="py-1 text-right pr-4">${formatCurrency(total)}</td></tr>`;
+        document.getElementById('out_meses_count').innerText = state.meses.length.toString().padStart(2, '0');
+    }
+
+    window.downloadPDF = async () => {
+      const btn = document.getElementById('btn-download');
+      const element = document.getElementById('document-page');
+      btn.disabled = true;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = "A processar...";
+      const clone = element.cloneNode(true);
+      Object.assign(clone.style, { position: 'fixed', top: '0', left: '0', margin: '0', boxShadow: 'none', zIndex: '-1000' });
+      document.body.appendChild(clone);
+      try {
+        const canvas = await html2canvas(clone, { scale: 3, useCORS: true, logging: false, width: 793.7, height: 1122.5 });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
+        pdf.save(`Declaracao_Faturamento.pdf`);
+      } catch (err) { console.error(err); } finally {
+        document.body.removeChild(clone);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
       }
     };
 
     document.addEventListener("DOMContentLoaded", () => {
       lucide.createIcons();
-      ['empresa', 'cnpj', 'jucesp', 'ie', 'dataAbertura', 'endereco', 'localData', 'nomeAssinatura', 'rgAssinatura', 'estadoRg', 'cpfAssinatura'].forEach(bindField);
+      ['empresa', 'ie', 'endereco', 'localData', 'consolidado', 'nomeAssinatura', 'rgAssinatura', 'estadoRg', 'cpfAssinatura'].forEach(bindField);
+      updateLayoutMode();
+      renderUnidades();
       renderMeses();
+      updateSignatureLayout();
     });
   </script>
 </body>
