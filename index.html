@@ -155,7 +155,7 @@
         <div id="out_simple_details">
             <p><span>C.N.P.J.:</span> <span id="out_simple_cnpj" class="font-bold"></span></p>
             <p><span>Jucesp:</span> <span id="out_simple_jucesp" class="font-bold"></span></p>
-            <p><span>Insc. Estadual:</span> <span id="out_ie" class="font-bold"></span></p>
+            <p id="out_ie_container"><span>Insc. Estadual:</span> <span id="out_ie" class="font-bold"></span></p>
             <p><span>Data:</span> <span id="out_simple_data" class="font-bold"></span></p>
         </div>
 
@@ -253,7 +253,8 @@
           if (output) output.innerText = key === 'estadoRg' ? e.target.value.toUpperCase() : e.target.value;
           
           if (key === 'nomeAssinatura') updateSignatureLayout();
-          if (key === 'rgAssinatura') updateRGDisplay();
+          if (key === 'rgAssinatura') updateIEDisplay();
+          if (key === 'ie') updateRGDisplay();
           if (key === 'cpfAssinatura') {
               const label = document.getElementById('out_cpf_label');
               if (label) label.innerText = state.cpfAssinatura.replace(/\D/g, '').length > 11 ? 'CNPJ' : 'CPF';
@@ -320,6 +321,16 @@
             rgContainer.classList.remove('hidden');
         } else {
             rgContainer.classList.add('hidden');
+        }
+    };
+
+    const uptadeIEDisplay = () => {
+        const ieContainer = document.getElementById('out_ie_container');
+        // Só exibe se houver texto no RG
+        if (state.ie && state.ie.trim() !== "") {
+            ieContainer.classList.remove('hidden');
+        } else {
+            ieContainer.classList.add('hidden');
         }
     };
 
