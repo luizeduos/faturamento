@@ -155,7 +155,7 @@
         <div id="out_simple_details">
             <p><span>C.N.P.J.:</span> <span id="out_simple_cnpj" class="font-bold"></span></p>
             <p><span>Jucesp:</span> <span id="out_simple_jucesp" class="font-bold"></span></p>
-            <p id="out_ie_container"><span>Insc. Estadual:</span> <span id="out_ie" class="font-bold"></span></p>
+            <p id="out_ie_container" class="hidden"><span>Insc. Estadual:</span> <span id="out_ie" class="font-bold"></span></p>
             <p><span>Data:</span> <span id="out_simple_data" class="font-bold"></span></p>
         </div>
 
@@ -181,14 +181,14 @@
       </div>
 
       <div id="out_signature_container" class="flex text-[15px] px-2 pb-4 mt-auto mb-10 justify-center" style="font-family: Calibri, sans-serif;">
-        <div id="sig_contador" class="w-[250px] flex flex-col items-center text-center">
+        <div id="sig_contador" class="w-[280px] flex flex-col items-center text-center">
           <div class="w-full border-t border-black mb-1"></div>
           <p class="font-bold">Reynaldo da Silva Moraes</p>
           <p class="font-bold">CRC: 1SP188092/O-4</p>
           <p class="font-bold">CPF: 154.274.198-02</p>
         </div>
 
-        <div id="sig_cliente" class="w-[250px] flex flex-col items-center text-center hidden">
+        <div id="sig_cliente" class="w-[280px] flex flex-col items-center text-center hidden">
           <div class="w-full border-t border-black mb-1"></div>
           <p class="font-bold" id="out_nomeAssinatura"></p>
           <p class="font-bold" id="out_rg_container">RG: <span id="out_rgAssinatura"></span>/<span id="out_estadoRg"></span></p>
@@ -203,7 +203,7 @@
 
     const DEFAULT_STATE = {
       empresa: 'NOME EXEMPLO',
-      ie: '000.000.000.000',
+      ie: '',
       endereco: 'Rua, 00 - Bairro - Cidade/UF',
       localData: 'São Miguel Arcanjo, 05 de Março de 2026',
       consolidado: false,
@@ -253,8 +253,8 @@
           if (output) output.innerText = key === 'estadoRg' ? e.target.value.toUpperCase() : e.target.value;
           
           if (key === 'nomeAssinatura') updateSignatureLayout();
-          if (key === 'rgAssinatura') updateIEDisplay();
-          if (key === 'ie') updateRGDisplay();
+          if (key === 'rgAssinatura') updateRGDisplay();
+          if (key === 'ie') updateIEDisplay();
           if (key === 'cpfAssinatura') {
               const label = document.getElementById('out_cpf_label');
               if (label) label.innerText = state.cpfAssinatura.replace(/\D/g, '').length > 11 ? 'CNPJ' : 'CPF';
@@ -316,7 +316,6 @@
 
     const updateRGDisplay = () => {
         const rgContainer = document.getElementById('out_rg_container');
-        // Só exibe se houver texto no RG
         if (state.rgAssinatura && state.rgAssinatura.trim() !== "") {
             rgContainer.classList.remove('hidden');
         } else {
@@ -324,9 +323,8 @@
         }
     };
 
-    const uptadeIEDisplay = () => {
+    const updateIEDisplay = () => {
         const ieContainer = document.getElementById('out_ie_container');
-        // Só exibe se houver texto no RG
         if (state.ie && state.ie.trim() !== "") {
             ieContainer.classList.remove('hidden');
         } else {
@@ -501,6 +499,7 @@
       renderUnidades();
       renderMeses();
       updateSignatureLayout();
+      updateIEDisplay(); // Inicia com a visibilidade correta da IE
     });
   </script>
 </body>
