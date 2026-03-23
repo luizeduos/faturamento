@@ -28,9 +28,11 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .title-faturamento { text-align: center; width: 100%; font-weight: bold; text-transform: uppercase; font-size: 16px; display: flex; justify-content: center; align-items: center; }
         
-        /* Ajuste fino para aproximar R$ do Valor na pré-visualização */
-        .col-rs { width: 40px; text-align: right; padding-right: 4px; }
-        .col-valor { text-align: right; width: 120px; }
+        /* Classes de alinhamento para o PDF (HTML) */
+        .pdf-col-mes { width: 45%; text-align: left; }
+        .pdf-col-ano { width: 15%; text-align: center; }
+        .pdf-col-rs { width: 10%; text-align: right; padding-right: 5px; }
+        .pdf-col-valor { width: 30%; text-align: right; }
     </style>
 </head>
 
@@ -159,7 +161,8 @@
                 <h2 class="font-bold text-[15px] mb-4 text-center uppercase">
                     <span id="out_table_title">RECEITA FISCAL</span> - ÚLTIMOS <span id="out_meses_count">01</span> MESES
                 </h2>
-                <table class="w-full max-w-[550px] mx-auto text-[14px]">
+                <!-- Tabela sincronizada com as larguras do Word -->
+                <table class="w-full max-w-[600px] mx-auto text-[14px] table-fixed">
                     <tbody id="out_meses_table"></tbody>
                 </table>
             </div>
@@ -262,7 +265,6 @@
 
             const docElements = [];
 
-            // Empresa e detalhes superiores
             const addRow = (label, value) => {
                 docElements.push(new Paragraph({ children: [new TextRun({ text: label, font: fontMain, size: baseSize }), new TextRun({ text: value, bold: true, font: fontMain, size: baseSize })], spacing: { after: 100 } }));
             };
@@ -276,35 +278,25 @@
             }
             addRow("Endereço: ", state.endereco);
 
-            // Título Central
-            docElements.push(new Paragraph({ 
-                children: [new TextRun({ text: "FATURAMENTO", bold: true, size: 24, font: fontMain })], 
-                alignment: AlignmentType.CENTER, 
-                spacing: { before: 600, after: 600 } 
-            }));
+            docElements.push(new Paragraph({ children: [new TextRun({ text: "FATURAMENTO", bold: true, size: 24, font: fontMain })], alignment: AlignmentType.CENTER, spacing: { before: 600, after: 600 } }));
 
-            // Subtítulo Tabela
             docElements.push(new Paragraph({
                 children: [new TextRun({ text: `${state.consolidado ? 'RECEITA FISCAL CONSOLIDADA' : 'RECEITA FISCAL'} - ÚLTIMOS ${state.meses.length.toString().padStart(2, '0')} MESES`, bold: true, size: baseSize, font: fontMain })],
                 alignment: AlignmentType.CENTER, spacing: { after: 240 }
             }));
 
-            // Tabela de Meses - LOGICA IGUAL AO PDF (Aproximação de R$ e Valor)
             const tableRows = [];
             state.meses.forEach(m => {
                 tableRows.push(new TableRow({
                     children: [
                         new TableCell({ children: [new Paragraph({ text: m.mes, font: fontMain, size: baseSize, spacing: { before: 60, after: 60 } })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 45, type: WidthType.PERCENTAGE } }),
                         new TableCell({ children: [new Paragraph({ text: m.ano, alignment: AlignmentType.CENTER, font: fontMain, size: baseSize })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 15, type: WidthType.PERCENTAGE } }),
-                        // Célula R$ alinhada à direita e bem estreita
                         new TableCell({ children: [new Paragraph({ text: "R$", alignment: AlignmentType.RIGHT, font: fontMain, size: baseSize })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 10, type: WidthType.PERCENTAGE } }),
-                        // Célula Valor alinhada à direita
                         new TableCell({ children: [new Paragraph({ text: m.valor, bold: true, alignment: AlignmentType.RIGHT, font: fontMain, size: baseSize })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 30, type: WidthType.PERCENTAGE } }),
                     ]
                 }));
             });
 
-            // Linha do Total
             tableRows.push(new TableRow({
                 children: [
                     new TableCell({ children: [new Paragraph({ text: "TOTAL:", bold: true, font: fontMain, size: baseSize, spacing: { before: 120 } })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder } }),
@@ -314,20 +306,13 @@
                 ]
             }));
 
-            docElements.push(new Table({ 
-                width: { size: 85, type: WidthType.PERCENTAGE }, 
-                alignment: AlignmentType.CENTER, 
-                borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder }, 
-                rows: tableRows 
-            }));
+            docElements.push(new Table({ width: { size: 85, type: WidthType.PERCENTAGE }, alignment: AlignmentType.CENTER, borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder }, rows: tableRows }));
 
-            // Rodapé
             docElements.push(new Paragraph({
                 children: [new TextRun({ text: state.localData, font: fontSig, italic: true, bold: true, size: baseSize })],
                 alignment: AlignmentType.CENTER, spacing: { before: 1200, after: 1800 }
             }));
 
-            // Assinaturas
             const createSigParagraph = (text) => new Paragraph({ children: [new TextRun({ text: text, bold: true, font: fontSig, size: baseSize })], alignment: AlignmentType.CENTER });
             const sigCells = [new TableCell({
                 children: [new Paragraph({ children: [new TextRun({ text: "Reynaldo da Silva Moraes", bold: true, font: fontSig, size: baseSize })], alignment: AlignmentType.CENTER, spacing: { before: 60 } }), createSigParagraph("CRC: 1SP188092/O-4"), createSigParagraph("CPF: 154.274.198-02")],
@@ -336,13 +321,11 @@
 
             if (state.nomeAssinatura) {
                 const label = state.cpfAssinatura.replace(/\D/g, '').length > 11 ? 'CNPJ' : 'CPF';
-                sigCells.push(
-                    new TableCell({ children: [new Paragraph("")], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 10, type: WidthType.PERCENTAGE } }),
-                    new TableCell({
-                        children: [new Paragraph({ children: [new TextRun({ text: state.nomeAssinatura, bold: true, font: fontSig, size: baseSize })], alignment: AlignmentType.CENTER, spacing: { before: 60 } }), state.rgAssinatura ? createSigParagraph(`RG: ${state.rgAssinatura}/${state.estadoRg}`) : new Paragraph(""), createSigParagraph(`${label}: ${state.cpfAssinatura}`)],
-                        borders: { top: { color: "000000", style: BorderStyle.SINGLE, size: 12 }, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 45, type: WidthType.PERCENTAGE }
-                    })
-                );
+                sigCells.push(new TableCell({ children: [new Paragraph("")], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 10, type: WidthType.PERCENTAGE } }),
+                new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: state.nomeAssinatura, bold: true, font: fontSig, size: baseSize })], alignment: AlignmentType.CENTER, spacing: { before: 60 } }), state.rgAssinatura ? createSigParagraph(`RG: ${state.rgAssinatura}/${state.estadoRg}`) : new Paragraph(""), createSigParagraph(`${label}: ${state.cpfAssinatura}`)],
+                    borders: { top: { color: "000000", style: BorderStyle.SINGLE, size: 12 }, bottom: noBorder, left: noBorder, right: noBorder }, width: { size: 45, type: WidthType.PERCENTAGE }
+                }));
             }
 
             docElements.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [new TableRow({ children: sigCells })], borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder }, alignment: AlignmentType.CENTER }));
@@ -466,19 +449,19 @@
             state.meses.forEach(m => {
                 table.innerHTML += `
                     <tr>
-                        <td class="w-40 py-1">${m.mes}</td>
-                        <td class="w-20 py-1 text-center">${m.ano}</td>
-                        <td class="col-rs py-1">R$</td>
-                        <td class="col-valor py-1 font-bold">${m.valor}</td>
+                        <td class="pdf-col-mes py-1">${m.mes}</td>
+                        <td class="pdf-col-ano py-1">${m.ano}</td>
+                        <td class="pdf-col-rs py-1">R$</td>
+                        <td class="pdf-col-valor py-1 font-bold">${m.valor}</td>
                     </tr>`;
                 total += parseValor(m.valor);
             });
             table.innerHTML += `
                 <tr class="font-bold">
-                    <td class="py-2">TOTAL:</td>
-                    <td></td>
-                    <td class="col-rs py-2">R$</td>
-                    <td class="col-valor py-2">${formatCurrency(total)}</td>
+                    <td class="pdf-col-mes py-2">TOTAL:</td>
+                    <td class="pdf-col-ano"></td>
+                    <td class="pdf-col-rs py-2">R$</td>
+                    <td class="pdf-col-valor py-2">${formatCurrency(total)}</td>
                 </tr>`;
             document.getElementById('out_meses_count').innerText = state.meses.length.toString().padStart(2, '0');
         };
